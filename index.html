@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AETHER CORE | System Override</title>
+    <style>
+        :root {
+            --bg-dark: #050505;
+            --bg-panel: rgba(20, 20, 25, 0.6);
+            --cyan: #06b6d4;
+            --purple: #8b5cf6;
+            --pink: #ec4899;
+            --gold: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-active: rgba(6, 182, 212, 0.4);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Кинематографичный шум (Film Grain) */
+        .noise-overlay {
+            position: fixed; inset: 0; z-index: 999; pointer-events: none; opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Фоновые свечения */
+        .bg-glow {
+            position: absolute; border-radius: 50%; filter: blur(150px); opacity: 0.3; z-index: 0;
+            transition: background 1s ease;
+        }
+        .glow-1 { width: 60vw; height: 60vw; background: var(--purple); top: -20%; left: -10%; }
+        .glow-2 { width: 50vw; height: 50vw; background: var(--cyan); bottom: -20%; right: -10%; }
+
+        /* --- ГЛАВНАЯ СЕТКА (BENTO LAYOUT) --- */
+        .app-container {
+            position: relative; z-index: 10;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 2rem;
+            width: 95%; max-width: 1200px;
+            height: 90vh;
+        }
+
+        /* ЛЕВАЯ ПАНЕЛЬ: ЯДРО */
+        .core-panel {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: var(--bg-panel); backdrop-filter: blur(20px);
+            border: 1px solid var(--border); border-radius: 32px;
+            position: relative; overflow: hidden;
+        }
+        
+        .score-display { text-align: center; margin-bottom: 3rem; z-index: 2; }
+        .score-value {
+            font-size: clamp(3rem, 5vw, 5rem); font-weight: 900; letter-spacing: -0.04em;
+            background: linear-gradient(135deg, #fff 0%, var(--cyan) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .score-value.bump { transform: scale(1.1); }
+        .score-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.75rem; margin-top: 0.5rem; }
+        
+        .combo-bar {
+            width: 60%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px;
+            margin: 1rem auto 0; overflow: hidden;
+        }
+        .combo-fill {
+            height: 100%; width: 0%; background: linear-gradient(90deg, var(--cyan), var(--pink));
+            transition: width 0.1s linear, background 0.3s; box-shadow: 0 0 10px var(--cyan);
+        }
+
+        .core-wrapper {
+            position: relative; width: 260px; height: 260px; cursor: pointer;
+            border-radius: 50%; transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 2;
+        }
+        .core-wrapper:active { transform: scale(0.92); }
+        
+        .core-outer {
+            position: absolute; inset: -15px; border-radius: 50%;
+            background: conic-gradient(from 0deg, var(--cyan), var(--purple), var(--pink), var(--cyan));
+            filter: blur(20px); opacity: 0.6; animation: spin 12s linear infinite;
+        }
+        .core-inner {
+            position: absolute; inset: 8px; border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #1e293b, #000);
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
+        }
+        .core-pulse {
+            width: 40%; height: 40%; border-radius: 50%;
+            background: linear-gradient(135deg, var(--cyan), var(--purple));
+            filter: blur(12px); animation: pulse-core 2.5s ease-in-out infinite;
+            transition: background 0.5s;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes pulse-core { 0%, 100% { transform: scale(0.9); opacity: 0.8; } 50% { transform: scale(1.2); opacity: 1; } }
+
+        /* ПРАВАЯ ПАНЕЛЬ: ВКЛАДКИ */
+        .tabs-panel {
+            display: flex; flex-direction: column;
+            background: var(--bg-panel); backdrop-filter: blur(20px);
+            border: 1px solid var(--border); border-radius: 32px;
+            overflow: hidden;
+        }
+
+        .tabs-header {
+            display: flex; border-bottom: 1px solid var(--border);
+        }
+        .tab-btn {
+            flex: 1; padding: 1.2rem; background: transparent; border: none; color: var(--text-muted);
+            font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.3s;
+            border-bottom: 2px solid transparent; text-transform: uppercase; letter-spacing: 0.1em;
+        }
+        .tab-btn:hover { color: var(--text-main); background: rgba(255,255,255,0.02); }
+        .tab-btn.active { color: var(--cyan); border-bottom-color: var(--cyan); background: rgba(6, 182, 212, 0.05); }
+
+        .tabs-content { flex: 1; overflow-y: auto; padding: 1.5rem; position: relative; }
+        /* Кастомный скроллбар */
+        .tabs-content::-webkit-scrollbar { width: 6px; }
+        .tabs-content::-webkit-scrollbar-track { background: transparent; }
+        .tabs-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+        .tab-pane { display: none; animation: fadeIn 0.3s ease; }
+        .tab-pane.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Карточки улучшений */
+        .upgrade-card {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            border-radius: 16px; padding: 1.2rem; margin-bottom: 1rem;
+            cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 1rem;
+        }
+        .upgrade-card:hover:not(.disabled) {
+            background: rgba(255,255,255,0.06); border-color: var(--border-active);
+            transform: translateX(4px);
+        }
+        .upgrade-card:active:not(.disabled) { transform: scale(0.98); }
+        .upgrade-card.disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+        
+        .upg-icon { font-size: 1.8rem; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 12px; }
+        .upg-info { flex: 1; }
+        .upg-name { font-weight: 700; font-size: 1rem; margin-bottom: 0.2rem; display: flex; justify-content: space-between; }
+        .upg-level { font-size: 0.75rem; color: var(--text-muted); font-family: monospace; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 4px; }
+        .upg-desc { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+        .upg-cost { font-family: monospace; font-weight: 700; color: var(--cyan); font-size: 0.9rem; display: flex; align-items: center; gap: 6px; }
+        .upgrade-card.disabled .upg-cost { color: #ef4444; }
+
+        /* Статистика и Система */
+        .stat-row { display: flex; justify-content: space-between; padding: 1rem 0; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+        .stat-label { color: var(--text-muted); }
+        .stat-value { font-weight: 700; color: var(--text-main); font-family: monospace; }
+        
+        .system-btn {
+            width: 100%; padding: 1rem; margin-bottom: 1rem; background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border); border-radius: 12px; color: var(--text-main);
+            font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .system-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--cyan); }
+        .system-btn.danger { border-color: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+        .system-btn.danger:hover { background: rgba(239, 68, 68, 0.1); border-color: #ef4444; }
+
+        /* Всплывающий текст */
+        .floating-text {
+            position: fixed; font-weight: 900; font-size: 1.5rem; pointer-events: none; z-index: 100;
+            animation: floatUp 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+        .floating-text.normal { color: var(--cyan); text-shadow: 0 0 10px var(--cyan); }
+        .floating-text.critical { color: var(--gold); text-shadow: 0 0 15px var(--gold); font-size: 2.2rem; z-index: 101; }
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+            30% { transform: translate(-50%, -100%) scale(1.3); }
+            100% { opacity: 0; transform: translate(-50%, -200%) scale(1); }
+        }
+
+        /* Toast уведомление */
+        .toast {
+            position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px);
+            background: rgba(6, 182, 212, 0.9); color: #000; padding: 0.8rem 1.5rem;
+            border-radius: 99px; font-weight: 700; font-size: 0.9rem; z-index: 1000;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(6, 182, 212, 0.3);
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* Адаптив для мобильных */
+        @media (max-width: 900px) {
+            .app-container { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: 100vh; width: 100%; border-radius: 0; }
+            .core-panel { border-radius: 0; border-left: none; border-right: none; border-top: none; min-height: 45vh; }
+            .tabs-panel { border-radius: 32px 32px 0 0; border-bottom: none; }
+            .core-wrapper { width: 200px; height: 200px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="noise-overlay"></div>
+    <div class="bg-glow glow-1" id="glow1"></div>
+    <div class="bg-glow glow-2" id="glow2"></div>
+
+    <div class="app-container">
+        <!-- ЛЕВАЯ ЧАСТЬ: ЯДРО -->
+        <div class="core-panel" id="mainContainer">
+            <div class="score-display">
+                <div class="score-value" id="scoreDisplay">0</div>
+                <div class="score-label">Энергия Эфира</div>
+                <div class="combo-bar"><div class="combo-fill" id="comboFill"></div></div>
+            </div>
+
+            <div class="core-wrapper" id="coreBtn">
+                <div class="core-outer" id="coreOuter"></div>
+                <div class="core-inner">
+                    <div class="core-pulse" id="corePulse"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ПРАВАЯ ЧАСТЬ: ВКЛАДКИ -->
+        <div class="tabs-panel">
+            <div class="tabs-header">
+                <button class="tab-btn active" onclick="switchTab('upgrades')">Улучшения</button>
+                <button class="tab-btn" onclick="switchTab('stats')">Архив</button>
+                <button class="tab-btn" onclick="switchTab('system')">Система</button>
+            </div>
+
+            <div class="tabs-content">
+                <!-- Вкладка: Улучшения -->
+                <div id="tab-upgrades" class="tab-pane active">
+                    <div id="upgradesList"></div>
+                </div>
+
+                <!-- Вкладка: Статистика -->
+                <div id="tab-stats" class="tab-pane">
+                    <div class="stat-row"><span class="stat-label">Всего кликов</span><span class="stat-value" id="statClicks">0</span></div>
+                    <div class="stat-row"><span class="stat-label">Всего заработано</span><span class="stat-value" id="statEarned">0</span></div>
+                    <div class="stat-row"><span class="stat-label">Максимальное комбо</span><span class="stat-value" id="statCombo">0</span></div>
+                    <div class="stat-row"><span class="stat-label">Критических ударов</span><span class="stat-value" id="statCrits">0</span></div>
+                    <div class="stat-row"><span class="stat-label">Время в системе</span><span class="stat-value" id="statTime">0м</span></div>
+                </div>
+
+                <!-- Вкладка: Система -->
+                <div id="tab-system" class="tab-pane">
+                    <button class="system-btn" onclick="manualSave()">💾 Сохранить прогресс</button>
+                    <button class="system-btn" onclick="toggleSound()" id="soundBtn">🔊 Звук: ВКЛ</button>
+                    <button class="system-btn danger" onclick="resetGame()">☢️ Сбросить систему</button>
+                    <div style="margin-top: 2rem; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+                        AETHER CORE v2.0<br>Автосохранение каждые 10 сек.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Прогресс сохранен</div>
+
+    <script>
+        // --- 1. АУДИО ДВИЖОК ---
+        const AudioEngine = {
+            ctx: null, enabled: true,
+            init() {
+                if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            },
+            playClick(mult) {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                const freq = 300 + (mult * 40);
+                osc.type = mult > 2 ? 'triangle' : 'sine';
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.5, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.1);
+            },
+            playBuy() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(900, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+            },
+            playError() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(100, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.start(); osc.stop(this.ctx.currentTime + 0.15);
+            }
+        };
+
+        // --- 2. СОСТОЯНИЕ ИГРЫ ---
+        const gameState = {
+            score: 0, totalEarned: 0, totalClicks: 0, totalCrits: 0, startTime: Date.now(),
+            clickPower: 1, autoClick: 0, multiplier: 1,
+            combo: 0, maxCombo: 0, lastClickTime: 0,
+            upgrades: {
+                resonance: { level: 0, baseCost: 15, costMult: 1.5, type: 'click', value: 1, name: 'Резонанс', desc: '+1 к силе клика', icon: '👆' },
+                siphon: { level: 0, baseCost: 50, costMult: 1.6, type: 'auto', value: 10, name: 'Сифон Пустоты', desc: 'Масштабируемый авто-доход', icon: '∞' },
+                prism: { level: 0, baseCost: 250, costMult: 2.2, type: 'multiplier', value: 1.5, name: 'Призма', desc: 'Умножает ВСЁ на 1.5', icon: '✨' },
+                luck: { level: 0, baseCost: 500, costMult: 1.8, type: 'luck', value: 5, name: 'Квантовая Удача', desc: '+5% шанс крита (x5)', icon: '🎲' }
+            }
+        };
+
+        // --- 3. DOM ЭЛЕМЕНТЫ ---
+        const els = {
+            score: document.getElementById('scoreDisplay'),
+            comboFill: document.getElementById('comboFill'),
+            core: document.getElementById('coreBtn'),
+            coreOuter: document.getElementById('coreOuter'),
+            corePulse: document.getElementById('corePulse'),
+            container: document.getElementById('mainContainer'),
+            upgradesList: document.getElementById('upgradesList'),
+            toast: document.getElementById('toast')
+        };
+
+        // --- 4. ИНИЦИАЛИЗАЦИЯ ---
+        function initUpgrades() {
+            els.upgradesList.innerHTML = '';
+            for (const [key, upg] of Object.entries(gameState.upgrades)) {
+                const card = document.createElement('div');
+                card.className = 'upgrade-card disabled';
+                card.id = `upg-${key}`;
+                card.innerHTML = `
+                    <div class="upg-icon">${upg.icon}</div>
+                    <div class="upg-info">
+                        <div class="upg-name">${upg.name} <span class="upg-level" id="lvl-${key}">Lvl 0</span></div>
+                        <div class="upg-desc">${upg.desc}</div>
+                        <div class="upg-cost" id="cost-${key}">⚡ ${upg.baseCost}</div>
+                    </div>
+                `;
+                card.addEventListener('click', () => buyUpgrade(key));
+                els.upgradesList.appendChild(card);
+            }
+        }
+
+        // --- 5. ОБНОВЛЕНИЕ UI (Оптимизированное) ---
+        function updateUI() {
+            els.score.textContent = Math.floor(gameState.score).toLocaleString();
+            
+            for (const [key, upg] of Object.entries(gameState.upgrades)) {
+                const cost = Math.floor(upg.baseCost * Math.pow(upg.costMult, upg.level));
+                const canAfford = gameState.score >= cost;
+                const card = document.getElementById(`upg-${key}`);
+                
+                document.getElementById(`lvl-${key}`).textContent = `Lvl ${upg.level}`;
+                document.getElementById(`cost-${key}`).textContent = `⚡ ${cost.toLocaleString()}`;
+                
+                canAfford ? card.classList.remove('disabled') : card.classList.add('disabled');
+            }
+
+            // Обновление статистики
+            document.getElementById('statClicks').textContent = gameState.totalClicks.toLocaleString();
+            document.getElementById('statEarned').textContent = Math.floor(gameState.totalEarned).toLocaleString();
+            document.getElementById('statCombo').textContent = gameState.maxCombo;
+            document.getElementById('statCrits').textContent = gameState.totalCrits;
+            const mins = Math.floor((Date.now() - gameState.startTime) / 60000);
+            document.getElementById('statTime').textContent = mins + 'м';
+        }
+
+        // --- 6. ЛОГИКА КОМБО ---
+        function handleCombo() {
+            const now = Date.now();
+            if (now - gameState.lastClickTime < 600) {
+                gameState.combo = Math.min(gameState.combo + 1, 100);
+            } else {
+                gameState.combo = Math.max(0, gameState.combo - 2);
+            }
+            gameState.lastClickTime = now;
+            if (gameState.combo > gameState.maxCombo) gameState.maxCombo = gameState.combo;
+
+            const comboMult = 1 + (gameState.combo * 0.05);
+            const pct = Math.min((gameState.combo / 30) * 100, 100);
+            els.comboFill.style.width = `${pct}%`;
+            
+            if (gameState.combo > 5) {
+                if (pct > 80) {
+                    els.corePulse.style.background = 'linear-gradient(135deg, #ec4899, #f59e0b)';
+                    els.coreOuter.style.background = 'conic-gradient(from 0deg, #ec4899, #f59e0b, #ec4899)';
+                } else {
+                    els.corePulse.style.background = 'linear-gradient(135deg, var(--cyan), var(--purple))';
+                    els.coreOuter.style.background = 'conic-gradient(from 0deg, var(--cyan), var(--purple), var(--pink), var(--cyan))';
+                }
+            } else {
+                els.corePulse.style.background = 'linear-gradient(135deg, var(--cyan), var(--purple))';
+            }
+            return comboMult;
+        }
+
+        // --- 7. ДЕЙСТВИЯ ---
+        function spawnText(x, y, value, isCritical) {
+            const el = document.createElement('div');
+            el.className = `floating-text ${isCritical ? 'critical' : 'normal'}`;
+            el.textContent = isCritical ? `КРИТ! +${Math.floor(value)}` : `+${Math.floor(value)}`;
+            el.style.left = `${x + (Math.random() - 0.5) * 40}px`;
+            el.style.top = `${y}px`;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 900);
+        }
+
+        function clickCore(e) {
+            AudioEngine.init();
+            const comboMult = handleCombo();
+            const isCritical = Math.random() < (gameState.upgrades.luck.level * 0.05);
+            
+            let gained = gameState.clickPower * gameState.multiplier * comboMult;
+            if (isCritical) { gained *= 5; gameState.totalCrits++; }
+
+            gameState.score += gained;
+            gameState.totalEarned += gained;
+            gameState.totalClicks++;
+            
+            els.score.classList.add('bump');
+            setTimeout(() => els.score.classList.remove('bump'), 100);
+            
+            if (gained > 10 || isCritical) {
+                els.container.classList.remove('shake');
+                void els.container.offsetWidth;
+                els.container.classList.add('shake');
+            }
+
+            const cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const cy = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            spawnText(cx, cy, gained, isCritical);
+            AudioEngine.playClick(comboMult);
+            updateUI();
+        }
+
+        function buyUpgrade(key) {
+            const upg = gameState.upgrades[key];
+            const cost = Math.floor(upg.baseCost * Math.pow(upg.costMult, upg.level));
+            
+            if (gameState.score >= cost) {
+                gameState.score -= cost;
+                upg.level++;
+                
+                if (upg.type === 'click') gameState.clickPower += upg.value;
+                // ИСПРАВЛЕНИЕ СИФОНА: Теперь он масштабируется от силы клика!
+                if (upg.type === 'auto') gameState.autoClick += (upg.value + (gameState.clickPower * 0.2));
+                if (upg.type === 'multiplier') gameState.multiplier *= upg.value;
+                
+                AudioEngine.playBuy();
+                updateUI();
+                showToast('Улучшение приобретено');
+            } else {
+                AudioEngine.playError();
+            }
+        }
+
+        // --- 8. ВКЛАДКИ И СИСТЕМА ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        function showToast(msg) {
+            els.toast.textContent = msg;
+            els.toast.classList.add('show');
+            setTimeout(() => els.toast.classList.remove('show'), 2000);
+        }
+
+        function manualSave() {
+            saveGame();
+            showToast('Прогресс успешно сохранен');
+        }
+
+        function saveGame() {
+            localStorage.setItem('aetherSave_v3', JSON.stringify(gameState));
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('aetherSave_v3');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Аккуратное слияние, чтобы не сломать при добавлении новых полей в будущем
+                Object.assign(gameState, parsed);
+                // Пересчитаем autoClick на всякий случай, чтобы применить новую формулу
+                gameState.autoClick = gameState.upgrades.siphon.level * (10 + (gameState.clickPower * 0.2));
+            }
+        }
+
+        function resetGame() {
+            if(confirm('Вы уверены? Весь прогресс будет необратимо удален.')) {
+                localStorage.removeItem('aetherSave_v3');
+                location.reload();
+            }
+        }
+
+        function toggleSound() {
+            AudioEngine.enabled = !AudioEngine.enabled;
+            document.getElementById('soundBtn').textContent = AudioEngine.enabled ? '🔊 Звук: ВКЛ' : '🔇 Звук: ВЫКЛ';
+        }
+
+        // --- 9. ЦИКЛЫ ---
+        setInterval(() => {
+            if (gameState.autoClick > 0) {
+                gameState.score += gameState.autoClick / 10;
+                gameState.totalEarned += gameState.autoClick / 10;
+                updateUI();
+            }
+            if (Date.now() - gameState.lastClickTime > 1000 && gameState.combo > 0) {
+                gameState.combo = Math.max(0, gameState.combo - 1);
+                handleCombo();
+                updateUI();
+            }
+        }, 100);
+
+        setInterval(saveGame, 10000); // Автосохранение каждые 10 сек
+
+        // --- 10. СОБЫТИЯ ---
+        els.core.addEventListener('mousedown', clickCore);
+        els.core.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            clickCore(e);
+        }, { passive: false });
+
+        // Старт
+        loadGame();
+        initUpgrades();
+        updateUI();
+    </script>
+</body>
+</html>
